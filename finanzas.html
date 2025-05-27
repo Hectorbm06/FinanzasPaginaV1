@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Finanzas Personales</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column; /* Para móviles, mejor empezar así y luego cambiar con media query */
+        }
+
+        nav {
+            width: 100%; /* Full width en móviles */
+            background-color: #333;
+            color: white;
+            padding: 10px; /* Menos padding en móviles */
+            box-sizing: border-box;
+        }
+
+        nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex; /* Para que los ítems estén en línea */
+            flex-wrap: wrap; /* Para que se ajusten si no caben */
+            justify-content: space-around; /* Distribuir espacio */
+        }
+
+        nav ul li {
+            margin-bottom: 5px; /* Menos margen */
+            margin-right: 5px; /* Espacio entre ítems */
+        }
+
+        nav ul li a {
+            text-decoration: none;
+            color: #ddd;
+            display: block;
+            padding: 8px; /* Menos padding en ítems */
+            border-radius: 4px;
+            transition: background-color 0.3s;
+            font-size: 0.9em; /* Ligeramente más pequeño para que quepa */
+        }
+
+        nav ul li a:hover, nav ul li a.active {
+            background-color: #555;
+            color: white;
+        }
+
+        .container {
+            flex-grow: 1;
+            padding: 15px; /* Menos padding en móviles */
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        h1, h2 {
+            color: #333;
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+
+        form {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        form label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        form input[type="text"],
+        form input[type="number"],
+        form input[type="date"],
+        form select {
+            width: 100%; /* Usar 100% y box-sizing se encargará del padding */
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box; /* Importante para que el padding no aumente el width */
+        }
+
+        form button {
+            background-color: #5cb85c;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%; /* Botones más anchos en móviles */
+        }
+
+        form button:hover {
+            background-color: #4cae4c;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            font-size: 0.9em; /* Tablas un poco más pequeñas */
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px; /* Menos padding en celdas */
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+        td button { /* Estilo para botones dentro de tablas */
+            padding: 5px 8px;
+            font-size: 0.8em;
+            margin-right: 5px;
+            background-color: #d9534f;
+            color:white;
+            border:none;
+            border-radius:3px;
+            cursor:pointer;
+        }
+        td button:hover {
+            background-color: #c9302c;
+        }
+        td button.pagar-btn { /* Botón específico para pagar deuda */
+             background-color: #5bc0de;
+        }
+        td button.pagar-btn:hover{
+            background-color: #31b0d5;
+        }
+
+
+        .balance-summary {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .balance-summary p {
+            font-size: 1em; /* Ligeramente más pequeño */
+            margin: 8px 0;
+        }
+        .balance-summary strong {
+            display: inline-block;
+            min-width: 130px; /* Ajustar si es necesario */
+        }
+        .ingreso { color: green; }
+        .gasto { color: red; }
+        .ahorro { color: blue; }
+        .neto-positivo { color: green; font-weight: bold;}
+        .neto-negativo { color: red; font-weight: bold;}
+
+        .chart-container {
+            background-color: white;
+            padding: 10px; /* Menos padding */
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            height: 300px; /* Un poco menos alto para móviles */
+        }
+
+        /* Estilos para pantallas más grandes */
+        @media (min-width: 768px) {
+            body {
+                flex-direction: row; /* Layout de lado a lado */
+            }
+            nav {
+                width: 200px;
+                padding: 20px;
+            }
+            nav ul {
+                flex-direction: column; /* Volver a columna para nav lateral */
+                justify-content: flex-start;
+            }
+            nav ul li {
+                margin-bottom: 15px;
+                 margin-right: 0;
+            }
+             nav ul li a {
+                font-size: 1em;
+                padding: 10px;
+            }
+            .container {
+                padding: 20px;
+            }
+            form input[type="text"],
+            form input[type="number"],
+            form input[type="date"],
+            form select {
+                width: calc(100% - 22px); /* Restaurar para PC si se desea, o mantener 100% */
+            }
+            form button {
+                width: auto; /* Ancho automático para botones en PC */
+            }
+            table {
+                font-size: 1em;
+            }
+             th, td {
+                padding: 12px;
+            }
+            .balance-summary p {
+                font-size: 1.1em;
+            }
+            .chart-container {
+                padding: 20px;
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <ul>
+            <li><a href="#" class="tab-link active" data-tab="dashboard">Dashboard</a></li>
+            <li><a href="#" class="tab-link" data-tab="registros">Ingresos/Gastos</a></li>
+            <li><a href="#" class="tab-link" data-tab="deudas">Deudas</a></li>
+            <li><a href="#" class="tab-link" data-tab="balance">Balance</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <!-- 5. Panel General -->
+        <div id="dashboard" class="tab-content active">
+            <h1>Dashboard General</h1>
+            <p>Aquí verás un resumen visual de tu estado financiero.</p>
+            <div class="chart-container">
+                <canvas id="dashboardChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 1 & 2. Registrar Ingresos y Gastos -->
+        <div id="registros" class="tab-content">
+            <h1>Registrar Ingresos y Gastos</h1>
+            <form id="formTransaccion">
+                <label for="tipo">Tipo:</label>
+                <select id="tipo" name="tipo" required>
+                    <option value="ingreso">Ingreso</option>
+                    <option value="gasto">Gasto</option>
+                </select>
+
+                <label for="descripcion">Descripción:</label>
+                <input type="text" id="descripcion" name="descripcion" required>
+
+                <label for="monto">Monto:</label>
+                <input type="number" id="monto" name="monto" step="0.01" min="0.01" required>
+
+                <label for="categoria">Categoría (si es Gasto):</label>
+                <select id="categoria" name="categoria">
+                    <option value="">N/A (Ingreso)</option>
+                    <option value="alimentos">Alimentos</option>
+                    <option value="entretenimiento">Entretenimiento</option>
+                    <option value="gym">Gym</option>
+                    <option value="ahorro">Ahorro</option>
+                    <option value="gasolina">Gasolina</option>
+                    <option value="ropa">Ropa</option>
+                    <option value="transporte">Transporte</option>
+                    <option value="salud">Salud</option>
+                    <option value="educacion">Educación</option>
+                    <option value="servicios">Servicios (Luz, Agua, Internet)</option>
+                    <option value="vivienda">Vivienda (Renta/Hipoteca)</option>
+                    <option value="pago_deuda">Pago de Deuda</option>
+                    <option value="otros">Otros</option>
+                </select>
+
+                <label for="fecha">Fecha:</label>
+                <input type="date" id="fecha" name="fecha" required>
+
+                <button type="submit">Agregar Transacción</button>
+            </form>
+
+            <h2>Transacciones Recientes</h2>
+            <table id="tablaTransacciones">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Descripción</th>
+                        <th>Monto</th>
+                        <th>Categoría</th>
+                        <th>Fecha</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Las transacciones se agregarán aquí por JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 4. Registrar Prestamo -->
+        <div id="deudas" class="tab-content">
+            <h1>Registro de Deudas</h1>
+            <form id="formDeuda">
+                <label for="descripcionDeuda">Descripción de la Deuda:</label>
+                <input type="text" id="descripcionDeuda" name="descripcionDeuda" required>
+
+                <label for="montoTotalDeuda">Monto Total Adeudado:</label>
+                <input type="number" id="montoTotalDeuda" name="montoTotalDeuda" step="0.01" min="0.01" required>
+
+                <label for="pagoMensualDeuda">Pago Mensual Estimado:</label>
+                <input type="number" id="pagoMensualDeuda" name="pagoMensualDeuda" step="0.01" min="0.01" required>
+		
+		        <label for="plazoMesesDeuda">Plazo Original (en meses):</label>
+    		    <input type="number" id="plazoMesesDeuda" name="plazoMesesDeuda" min="1" step="1" required>
+
+                <button type="submit">Agregar Deuda</button>
+            </form>
+
+            <h2>Mis Deudas Actuales</h2>
+            <table id="tablaDeudas">
+                <thead>
+                    <tr>
+                        <th>Descripción</th>
+                        <th>Total Deuda</th>
+                        <th>Pago Mensual Est.</th>
+                        <th>Monto Pagado</th>
+                        <th>Pagos Restantes (Estimado)</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Las deudas se agregarán aquí por JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 3. Balance -->
+        <div id="balance" class="tab-content">
+            <h1>Balance</h1>
+            <!-- <p>Filtro por mes (funcionalidad pendiente).</p> -->
+            
+            <div class="balance-summary">
+                <h2>Resumen</h2>
+                <p><strong>Total Ingresos:</strong> <span id="totalIngresos" class="ingreso">0.00</span> $</p>
+                <p><strong>Total Gastos:</strong> <span id="totalGastos" class="gasto">0.00</span> $</p>
+                <p><strong>Total Ahorrado (categoría 'Ahorro'):</strong> <span id="totalAhorroBalance" class="ahorro">0.00</span> $</p>
+                <p><strong>Balance Neto (Ingresos - Gastos):</strong> <span id="balanceNeto">0.00</span> $</p>
+            </div>
+
+            <h2>Distribución de Gastos</h2>
+            <table id="tablaBalanceDetalle">
+                <thead>
+                    <tr>
+                        <th>Categoría de Gasto</th>
+                        <th>Total</th>
+                        <th>Porcentaje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Detalles del balance por categoría se mostrarán aquí -->
+                </tbody>
+            </table>
+
+            <div class="chart-container" style="margin-top: 20px;">
+                <canvas id="balanceChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Selectores del DOM ---
+            const tabLinks = document.querySelectorAll('.tab-link');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            const formTransaccion = document.getElementById('formTransaccion');
+            const tablaTransaccionesBody = document.getElementById('tablaTransacciones').querySelector('tbody');
+            const selectCategoria = document.getElementById('categoria');
+            const selectTipoTransaccion = document.getElementById('tipo');
+
+            const formDeuda = document.getElementById('formDeuda'); // Ya estaba, solo para confirmar
+            const tablaDeudasBody = document.getElementById('tablaDeudas').querySelector('tbody');
+
+            const totalIngresosEl = document.getElementById('totalIngresos');
+            const totalGastosEl = document.getElementById('totalGastos');
+            const totalAhorroBalanceEl = document.getElementById('totalAhorroBalance');
+            const balanceNetoEl = document.getElementById('balanceNeto');
+            const tablaBalanceDetalleBody = document.getElementById('tablaBalanceDetalle').querySelector('tbody');
+
+            let balanceChartInstance = null;
+            let dashboardChartInstance = null;
+
+            let transacciones = JSON.parse(localStorage.getItem('transaccionesFinanzasV2')) || [];
+            let deudas = JSON.parse(localStorage.getItem('deudasFinanzasV2')) || [];
+
+            // --- Lógica de Navegación por Pestañas ---
+            tabLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetTab = e.target.getAttribute('data-tab');
+
+                    tabLinks.forEach(l => l.classList.remove('active'));
+                    e.target.classList.add('active');
+
+                    tabContents.forEach(content => {
+                        content.classList.remove('active');
+                        if (content.id === targetTab) {
+                            content.classList.add('active');
+                        }
+                    });
+                    if (targetTab === 'balance') actualizarVistaBalance();
+                    if (targetTab === 'dashboard') actualizarDashboardChart();
+                });
+            });
+            
+            selectTipoTransaccion.addEventListener('change', () => {
+                selectCategoria.disabled = selectTipoTransaccion.value === 'ingreso';
+                if (selectTipoTransaccion.value === 'ingreso') {
+                    selectCategoria.value = '';
+                }
+            });
+            selectCategoria.disabled = selectTipoTransaccion.value === 'ingreso';
+
+            // --- Lógica de Transacciones ---
+            formTransaccion.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const tipo = e.target.tipo.value;
+                const descripcion = e.target.descripcion.value.trim();
+                const monto = parseFloat(e.target.monto.value);
+                const categoria = tipo === 'gasto' ? e.target.categoria.value : '';
+                const fecha = e.target.fecha.value;
+
+                if (!descripcion || isNaN(monto) || monto <= 0 || !fecha || (tipo === 'gasto' && !categoria) ) {
+                    alert('Por favor, completa todos los campos requeridos con valores válidos.');
+                    return;
+                }
+                // Asignar fecha actual si no se selecciona una
+                const fechaTransaccion = fecha ? fecha : new Date().toISOString().split('T')[0];
+
+
+                const nuevaTransaccion = { id: Date.now(), tipo, descripcion, monto, categoria, fecha: fechaTransaccion };
+                transacciones.push(nuevaTransaccion);
+                guardarTransacciones();
+                renderizarTransacciones();
+                actualizarVistaBalance();
+                actualizarDashboardChart();
+                formTransaccion.reset();
+                selectCategoria.disabled = selectTipoTransaccion.value === 'ingreso'; // Resetear estado del select
+                document.getElementById('fecha').value = new Date().toISOString().split('T')[0]; // Poner fecha actual por defecto
+            });
+
+            function renderizarTransacciones() {
+                tablaTransaccionesBody.innerHTML = '';
+                // Ordenar por fecha descendente
+                const transaccionesOrdenadas = [...transacciones].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+                transaccionesOrdenadas.forEach(t => {
+                    const row = tablaTransaccionesBody.insertRow();
+                    row.innerHTML = `
+                        <td class="${t.tipo === 'ingreso' ? 'ingreso' : 'gasto'}">${t.tipo.charAt(0).toUpperCase() + t.tipo.slice(1)}</td>
+                        <td>${t.descripcion}</td>
+                        <td>${t.monto.toFixed(2)} $</td>
+                        <td>${t.categoria || 'N/A'}</td>
+                        <td>${new Date(t.fecha + 'T00:00:00').toLocaleDateString()}</td>
+                        <td><button onclick="eliminarTransaccion(${t.id})">Eliminar</button></td>
+                    `;
+                });
+            }
+
+            window.eliminarTransaccion = (id) => {
+                if (!confirm("¿Estás seguro de que deseas eliminar esta transacción?")) return;
+                transacciones = transacciones.filter(t => t.id !== id);
+                guardarTransacciones();
+                renderizarTransacciones();
+                actualizarVistaBalance();
+                actualizarDashboardChart();
+            };
+
+            function guardarTransacciones() {
+                localStorage.setItem('transaccionesFinanzasV2', JSON.stringify(transacciones));
+            }
+
+            // --- Lógica de Deudas ---
+            formDeuda.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const descripcion = document.getElementById('descripcionDeuda').value.trim();
+                const montoTotal = parseFloat(document.getElementById('montoTotalDeuda').value);
+                const pagoMensual = parseFloat(document.getElementById('pagoMensualDeuda').value);
+                const plazoMeses = parseInt(document.getElementById('plazoMesesDeuda').value);
+
+                if (!descripcion || isNaN(montoTotal) || montoTotal <= 0 || isNaN(pagoMensual) || pagoMensual <= 0 || isNaN(plazoMeses) || plazoMeses <= 0) {
+                    alert('Por favor, completa todos los campos de deuda con valores válidos y positivos.');
+                    return;
+                }
+
+                const nuevaDeuda = {
+                    id: Date.now(),
+                    descripcion,
+                    montoTotal,
+                    pagoMensualEstimado: pagoMensual, // Cambiado para reflejar que es una estimación
+                    plazoOriginalMeses: plazoMeses,
+                    montoPagado: 0, // Inicializar monto pagado
+                    fechaRegistro: new Date().toISOString().split('T')[0]
+                };
+
+                deudas.push(nuevaDeuda);
+                guardarDeudas();
+                renderizarDeudas();
+                formDeuda.reset();
+            });
+
+            function renderizarDeudas() {
+                tablaDeudasBody.innerHTML = '';
+                 // Ordenar por fecha de registro descendente
+                const deudasOrdenadas = [...deudas].sort((a, b) => new Date(b.fechaRegistro) - new Date(a.fechaRegistro));
+
+                deudasOrdenadas.forEach(d => {
+                    const pagosRestantesEstimados = Math.max(0, Math.ceil((d.montoTotal - d.montoPagado) / d.pagoMensualEstimado));
+                    const row = tablaDeudasBody.insertRow();
+                    row.innerHTML = `
+                        <td>${d.descripcion}</td>
+                        <td>${d.montoTotal.toFixed(2)} $</td>
+                        <td>${d.pagoMensualEstimado.toFixed(2)} $</td>
+                        <td>${d.montoPagado.toFixed(2)} $</td>
+                        <td>${pagosRestantesEstimados} (${(d.montoTotal - d.montoPagado).toFixed(2)} $ restantes)</td>
+                        <td>
+                            <button class="pagar-btn" onclick="gestionarPagoDeuda(${d.id})">Registrar Pago</button>
+                            <button onclick="eliminarDeuda(${d.id})">Eliminar</button>
+                        </td>
+                    `;
+                });
+            }
+            
+            window.gestionarPagoDeuda = (id) => {
+                const deuda = deudas.find(d => d.id === id);
+                if (!deuda) return;
+
+                const montoPagoStr = prompt(`Registrar pago para "${deuda.descripcion}".\nMonto total: ${deuda.montoTotal.toFixed(2)}\nMonto pagado: ${deuda.montoPagado.toFixed(2)}\n\nIngrese el monto del pago (sugerido ${deuda.pagoMensualEstimado.toFixed(2)}):`, deuda.pagoMensualEstimado.toFixed(2));
+                
+                if (montoPagoStr === null) return; // Usuario canceló
+
+                const montoPago = parseFloat(montoPagoStr);
+
+                if (isNaN(montoPago) || montoPago <= 0) {
+                    alert("Por favor, ingrese un monto de pago válido.");
+                    return;
+                }
+
+                const descripcionTransaccion = `Pago deuda: ${deuda.descripcion}`;
+                const fechaActual = new Date().toISOString().split('T')[0];
+                
+                // Crear transacción de gasto
+                const nuevaTransaccionPago = { 
+                    id: Date.now(), 
+                    tipo: 'gasto', 
+                    descripcion: descripcionTransaccion, 
+                    monto: montoPago, 
+                    categoria: 'pago_deuda', // Nueva categoría específica
+                    fecha: fechaActual 
+                };
+                transacciones.push(nuevaTransaccionPago);
+                
+                // Actualizar deuda
+                deuda.montoPagado += montoPago;
+                if (deuda.montoPagado > deuda.montoTotal) { // No pagar de más
+                    const exceso = deuda.montoPagado - deuda.montoTotal;
+                    alert(`El pago excede el monto total de la deuda por ${exceso.toFixed(2)}$. Se ajustará al monto total.`);
+                    deuda.montoPagado = deuda.montoTotal;
+                    nuevaTransaccionPago.monto = montoPago - exceso; // Ajustar la transacción también
+                     if (nuevaTransaccionPago.monto <=0) { // Si el ajuste hace que sea 0 o menos, no la registramos
+                        transacciones.pop(); // Quitar la transacción si el pago es 0 o negativo tras ajuste
+                    }
+                }
+                
+                guardarDeudas();
+                guardarTransacciones();
+                renderizarDeudas();
+                renderizarTransacciones(); // Actualizar tabla de transacciones
+                actualizarVistaBalance();
+                actualizarDashboardChart();
+
+                if (deuda.montoPagado >= deuda.montoTotal) {
+                    alert(`¡Felicidades! La deuda "${deuda.descripcion}" ha sido completamente pagada.`);
+                }
+            };
+
+            window.eliminarDeuda = (id) => {
+                if (!confirm("¿Estás seguro de que deseas eliminar esta deuda? Esto no eliminará los pagos ya registrados como transacciones.")) return;
+                deudas = deudas.filter(d => d.id !== id);
+                guardarDeudas();
+                renderizarDeudas();
+                 // Opcional: actualizar dashboard si las deudas afectan alguna métrica allí
+                // actualizarDashboardChart(); 
+            };
+
+            function guardarDeudas() {
+                localStorage.setItem('deudasFinanzasV2', JSON.stringify(deudas));
+            }
+
+            // --- Lógica de Balance ---
+            function actualizarVistaBalance() {
+                let totalIngresos = 0;
+                let totalGastos = 0;
+                let totalAhorro = 0;
+                const gastosPorCategoria = {};
+
+                transacciones.forEach(t => {
+                    if (t.tipo === 'ingreso') {
+                        totalIngresos += t.monto;
+                    } else { // Gasto
+                        totalGastos += t.monto;
+                        if (t.categoria === 'ahorro') {
+                            totalAhorro += t.monto;
+                        }
+                        gastosPorCategoria[t.categoria] = (gastosPorCategoria[t.categoria] || 0) + t.monto;
+                    }
+                });
+
+                const balanceNeto = totalIngresos - totalGastos;
+
+                totalIngresosEl.textContent = `${totalIngresos.toFixed(2)}`;
+                totalGastosEl.textContent = `${totalGastos.toFixed(2)}`;
+                totalAhorroBalanceEl.textContent = `${totalAhorro.toFixed(2)}`;
+                balanceNetoEl.textContent = `${balanceNeto.toFixed(2)}`;
+                balanceNetoEl.className = balanceNeto >= 0 ? 'neto-positivo' : 'neto-negativo';
+
+                tablaBalanceDetalleBody.innerHTML = '';
+                // Ordenar categorías por monto descendente
+                const categoriasOrdenadas = Object.entries(gastosPorCategoria)
+                                              .sort(([,a],[,b]) => b-a);
+
+                for (const [categoria, montoCategoria] of categoriasOrdenadas) {
+                    const porcentaje = totalGastos > 0 ? (montoCategoria / totalGastos * 100).toFixed(1) : 0;
+                    const row = tablaBalanceDetalleBody.insertRow();
+                    row.innerHTML = `
+                        <td>${categoria.charAt(0).toUpperCase() + categoria.slice(1)}</td>
+                        <td>${montoCategoria.toFixed(2)} $</td>
+                        <td>${porcentaje} %</td>
+                    `;
+                }
+                if (Object.keys(gastosPorCategoria).length === 0) {
+                     tablaBalanceDetalleBody.innerHTML = `<tr><td colspan="3">No hay gastos registrados.</td></tr>`;
+                }
+
+
+                const ctxBalance = document.getElementById('balanceChart').getContext('2d');
+                if (balanceChartInstance) {
+                    balanceChartInstance.destroy();
+                }
+                
+                const categoriasGastoLabels = Object.keys(gastosPorCategoria);
+                const categoriasGastoValores = Object.values(gastosPorCategoria);
+
+                if (categoriasGastoLabels.length > 0) {
+                    balanceChartInstance = new Chart(ctxBalance, {
+                        type: 'doughnut',
+                        data: {
+                            labels: categoriasGastoLabels.map(c => c.charAt(0).toUpperCase() + c.slice(1)),
+                            datasets: [{
+                                label: 'Distribución de Gastos',
+                                data: categoriasGastoValores,
+                                backgroundColor: [ // Paleta de colores más consistentes
+                                    'rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)',
+                                    'rgba(255, 206, 86, 0.7)', 'rgba(75, 192, 192, 0.7)',
+                                    'rgba(153, 102, 255, 0.7)', 'rgba(255, 159, 64, 0.7)',
+                                    'rgba(199, 199, 199, 0.7)', 'rgba(83, 102, 255, 0.7)',
+                                    'rgba(100, 255, 100, 0.7)', 'rgba(255, 100, 200, 0.7)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { 
+                                legend: { position: 'top' }, 
+                                title: { display: true, text: 'Distribución de Gastos por Categoría' } 
+                            }
+                        }
+                    });
+                } else if (balanceChartInstance) { // Si no hay datos pero el chart existe
+                     balanceChartInstance.clear();
+                }
+            }
+
+            function actualizarDashboardChart() {
+                let totalIngresos = 0;
+                let totalGastos = 0;
+                transacciones.forEach(t => {
+                    if (t.tipo === 'ingreso') totalIngresos += t.monto;
+                    else totalGastos += t.monto;
+                });
+
+                const balanceNeto = totalIngresos - totalGastos;
+                let estadoFinanciero = 'amarillo';
+                let mensajeEstado = "Tus finanzas están equilibradas.";
+
+                if (totalIngresos === 0 && totalGastos === 0) {
+                     mensajeEstado = "Aún no hay datos para mostrar.";
+                     estadoFinanciero = 'gris';
+                } else if (balanceNeto > 0) { 
+                    if (balanceNeto >= totalIngresos * 0.2) { 
+                        estadoFinanciero = 'verde';
+                        mensajeEstado = "¡Excelente! Tienes un superávit saludable.";
+                    } else {
+                        estadoFinanciero = 'amarillo-verde';
+                        mensajeEstado = "Bien. Tienes un superávit.";
+                    }
+                } else if (balanceNeto < 0) { 
+                    estadoFinanciero = 'rojo';
+                    mensajeEstado = "Atención: Tus gastos superan tus ingresos.";
+                }
+
+
+                const ctxDashboard = document.getElementById('dashboardChart').getContext('2d');
+                if (dashboardChartInstance) {
+                    dashboardChartInstance.destroy();
+                }
+
+                dashboardChartInstance = new Chart(ctxDashboard, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Ingresos', 'Gastos', 'Balance Neto'],
+                        datasets: [{
+                            label: 'Resumen Financiero ($)',
+                            data: [totalIngresos, totalGastos, balanceNeto],
+                            backgroundColor: [
+                                'rgba(75, 192, 192, 0.7)', 
+                                'rgba(255, 99, 132, 0.7)', 
+                                balanceNeto >= 0 ? 'rgba(153, 102, 255, 0.7)' : 'rgba(255, 159, 64, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(255, 99, 132, 1)',
+                                balanceNeto >= 0 ? 'rgba(153, 102, 255, 1)' : 'rgba(255, 159, 64, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } },
+                        plugins: {
+                            legend: { display: false },
+                            title: { display: true, text: `Estado Financiero: ${mensajeEstado}`, font: { size: 14 } }
+                        }
+                    }
+                });
+                
+                const dashboardChartTitle = dashboardChartInstance.options.plugins.title;
+                if (estadoFinanciero === 'verde') {
+                    dashboardChartTitle.color = 'green';
+                } else if (estadoFinanciero === 'rojo') {
+                    dashboardChartTitle.color = 'red';
+                } else if (estadoFinanciero === 'amarillo-verde') {
+                    dashboardChartTitle.color = '#8FBC8F'; // DarkSeaGreen
+                } else if (estadoFinanciero === 'gris'){
+                     dashboardChartTitle.color = 'grey';
+                }
+                 else {
+                    dashboardChartTitle.color = '#FF8C00'; // DarkOrange
+                }
+                dashboardChartInstance.update();
+            }
+
+
+            // --- Carga Inicial ---
+            document.getElementById('fecha').value = new Date().toISOString().split('T')[0]; // Poner fecha actual por defecto
+            renderizarTransacciones();
+            renderizarDeudas();
+            actualizarVistaBalance(); 
+            actualizarDashboardChart(); 
+            
+            // Activar la primera pestaña (Dashboard) si ninguna está activa (por si acaso)
+            if (!document.querySelector('.tab-link.active')) {
+                document.querySelector('.tab-link[data-tab="dashboard"]').classList.add('active');
+                document.getElementById('dashboard').classList.add('active');
+            } else {
+                // Forzar actualización del gráfico de la pestaña activa si no es dashboard
+                const activeTabId = document.querySelector('.tab-link.active').getAttribute('data-tab');
+                if (activeTabId === 'balance') actualizarVistaBalance();
+                // No es necesario para 'registros' o 'deudas' ya que se renderizan al inicio.
+            }
+
+
+        });
+    </script>
+
+</body>
+</html>
